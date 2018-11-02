@@ -2,12 +2,15 @@ __all__ = ['Monitor', 'get_monitor_files', 'load_results']
 
 import gym
 from gym.core import Wrapper
+import os
 import time
+import uuid
 from glob import glob
 import csv
 import os.path as osp
 import json
 import numpy as np
+import pandas
 
 class Monitor(Wrapper):
     EXT = "monitor.csv"
