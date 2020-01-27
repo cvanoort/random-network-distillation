@@ -77,7 +77,7 @@ class Monitor(Wrapper):
                 self.logger.writerow(epinfo)
                 self.f.flush()
             if "episode" not in info:
-                info["episoide"] = {}
+                info["episode"] = {}
             info['episode'].update(epinfo)
         self.total_steps += 1
         return (ob, rew, done, info)
