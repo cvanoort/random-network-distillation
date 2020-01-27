@@ -158,6 +158,7 @@ if __name__ == "__main__":
                             for t in timeseries:
                                 t[key] = list(map(len, t[key]))
                     max_timesteps = min((len(_[x_axis]) for _ in timeseries))
+
                     try:
                         data = np.asarray(
                             [t[key][:max_timesteps] for t in timeseries],
@@ -165,8 +166,8 @@ if __name__ == "__main__":
                         )
                     except:
                         import ipdb
-
                         ipdb.set_trace()
+
                     lines = [np.nan_to_num(d[key]) for d in timeseries]
                     lines_x = [np.asarray(d[x_axis]) for d in timeseries]
                     alphas = [0.2 / np.sqrt(len(lines)) for l in lines]

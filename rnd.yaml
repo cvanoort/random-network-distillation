@@ -8,8 +8,10 @@ dependencies:
   - tensorflow-gpu=1.14
   - pip:
     - baselines
+    - cv2
     - gym[atari]
     - ipdb
+    - matplotlib
     - mpi4py
     - numpy
     - pandas

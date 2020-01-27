@@ -187,7 +187,7 @@ class DummyMontezumaInfoWrapper(gym.Wrapper):
         if done:
             if "episode" not in info:
                 info["episode"] = {}
-            info["episode"].update(pos_count=0, visited_rooms=set([0]))
+            info["episode"].update(pos_count=0, visited_rooms={0})
         return obs, rew, done, info
 
     def reset(self):
@@ -199,6 +199,7 @@ class AddRandomStateToInfo(gym.Wrapper):
         """Adds the random state to the info field on the first step after reset
         """
         gym.Wrapper.__init__(self, env)
+        self.rng_at_episode_start = None
 
     def step(self, action):
         ob, r, d, info = self.env.step(action)
