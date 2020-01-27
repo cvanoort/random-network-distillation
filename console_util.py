@@ -1,29 +1,37 @@
 from __future__ import print_function
-from contextlib import contextmanager
-import numpy as np
+
 import time
+from contextlib import contextmanager
+
+import numpy as np
+
 
 # ================================================================
 # Misc
 # ================================================================
 
+
 def fmt_row(width, row, header=False):
     out = " | ".join(fmt_item(x, width) for x in row)
-    if header: out = out + "\n" + "-"*len(out)
+    if header:
+        out = out + "\n" + "-" * len(out)
     return out
+
 
 def fmt_item(x, l):
     if isinstance(x, np.ndarray):
-        assert x.ndim==0
+        assert x.ndim == 0
         x = x.item()
     if isinstance(x, (float, np.float32, np.float64)):
         v = abs(x)
-        if (v < 1e-4 or v > 1e+4) and v > 0:
+        if (v < 1e-4 or v > 1e4) and v > 0:
             rep = "%7.2e" % x
         else:
             rep = "%7.5f" % x
-    else: rep = str(x)
-    return " "*(l - len(rep)) + rep
+    else:
+        rep = str(x)
+    return " " * (l - len(rep)) + rep
+
 
 color2num = dict(
     gray=30,
@@ -34,26 +42,35 @@ color2num = dict(
     magenta=35,
     cyan=36,
     white=37,
-    crimson=38
+    crimson=38,
 )
+
 
 def colorize(string, color, bold=False, highlight=False):
     attr = []
     num = color2num[color]
-    if highlight: num += 10
+    if highlight:
+        num += 10
     attr.append(str(num))
-    if bold: attr.append('1')
-    return '\x1b[%sm%s\x1b[0m' % (';'.join(attr), string)
+    if bold:
+        attr.append("1")
+    return "\x1b[%sm%s\x1b[0m" % (";".join(attr), string)
 
 
 MESSAGE_DEPTH = 0
 
+
 @contextmanager
 def timed(msg):
-    global MESSAGE_DEPTH #pylint: disable=W0603
-    print(colorize('\t'*MESSAGE_DEPTH + '=: ' + msg, color='magenta'))
+    global MESSAGE_DEPTH  # pylint: disable=W0603
+    print(colorize("\t" * MESSAGE_DEPTH + "=: " + msg, color="magenta"))
     tstart = time.time()
     MESSAGE_DEPTH += 1
     yield
     MESSAGE_DEPTH -= 1
-    print(colorize('\t'*MESSAGE_DEPTH + "done in %.3f seconds"%(time.time() - tstart), color='magenta'))
+    print(
+        colorize(
+            "\t" * MESSAGE_DEPTH + "done in %.3f seconds" % (time.time() - tstart),
+            color="magenta",
+        )
+    )

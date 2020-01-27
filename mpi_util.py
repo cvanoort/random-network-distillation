@@ -1,8 +1,11 @@
-from collections import defaultdict
-from mpi4py import MPI
-import os, numpy as np
+import numpy as np
+import os
 import platform
+from collections import defaultdict
+
 import tensorflow as tf
+from mpi4py import MPI
+
 
 def sync_from_root(sess, variables, comm=None):
     """
@@ -11,14 +14,17 @@ def sync_from_root(sess, variables, comm=None):
       sess: the TensorFlow session.
       variables: all parameter variables including optimizer's
     """
-    if comm is None: comm = MPI.COMM_WORLD
+    if comm is None:
+        comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     for var in variables:
         if rank == 0:
             comm.bcast(sess.run(var))
         else:
             import tensorflow as tf
+
             sess.run(tf.assign(var, comm.bcast(None)))
+
 
 # def gpu_count():
 #     """
@@ -39,21 +45,22 @@ def sync_from_root(sess, variables, comm=None):
 #     local_rank, _ = get_local_rank_size(MPI.COMM_WORLD)
 #     os.environ['CUDA_VISIBLE_DEVICES'] = str(local_rank % num_gpus)
 
+
 def guess_available_gpus(n_gpus=None):
     if n_gpus is not None:
         return list(range(n_gpus))
 
-    if 'CUDA_VISIBLE_DEVICES' in os.environ:
-        cuda_visible_divices = os.environ['CUDA_VISIBLE_DEVICES']
-        cuda_visible_divices = cuda_visible_divices.split(',')
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        cuda_visible_divices = os.environ["CUDA_VISIBLE_DEVICES"]
+        cuda_visible_divices = cuda_visible_divices.split(",")
         return [int(n) for n in cuda_visible_divices]
 
-    if 'RCALL_NUM_GPU' in os.environ:
-        cuda_visible_devices = os.environ['CUDA_VISIBLE_DEVICES']
-        cuda_visible_devices = cuda_visible_devices.split(',')
+    if "RCALL_NUM_GPU" in os.environ:
+        cuda_visible_devices = os.environ["CUDA_VISIBLE_DEVICES"]
+        cuda_visible_devices = cuda_visible_devices.split(",")
         return [int(n) for n in cuda_visible_devices]
 
-    nvidia_dir = '/proc/driver/nvidia/gpus/'
+    nvidia_dir = "/proc/driver/nvidia/gpus/"
     if os.path.exists(nvidia_dir):
         n_gpus = len(os.listdir(nvidia_dir))
         return list(range(n_gpus))
@@ -68,10 +75,12 @@ def setup_mpi_gpus():
 
     node_id = platform.node()
     nodes_ordered_by_rank = MPI.COMM_WORLD.allgather(node_id)
-    processes_outranked_on_this_node = [n for n in nodes_ordered_by_rank[:MPI.COMM_WORLD.Get_rank()] if n == node_id]
+    processes_outranked_on_this_node = [
+        n for n in nodes_ordered_by_rank[: MPI.COMM_WORLD.Get_rank()] if n == node_id
+    ]
     local_rank = len(processes_outranked_on_this_node)
-    
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(available_gpus[local_rank])
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(available_gpus[local_rank])
 
 
 def get_local_rank_size(comm):
@@ -94,6 +103,7 @@ def get_local_rank_size(comm):
     assert local_rank is not None
     return local_rank, node2rankssofar[this_node]
 
+
 def share_file(comm, path):
     """
     Copies the file from rank 0 to all other ranks
@@ -101,36 +111,42 @@ def share_file(comm, path):
     """
     localrank, _ = get_local_rank_size(comm)
     if comm.Get_rank() == 0:
-        with open(path, 'rb') as fh:
+        with open(path, "rb") as fh:
             data = fh.read()
         comm.bcast(data)
     else:
         data = comm.bcast(None)
         if localrank == 0:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, 'wb') as fh:
+            with open(path, "wb") as fh:
                 fh.write(data)
     comm.Barrier()
+
 
 def dict_gather_mean(comm, d):
     alldicts = comm.allgather(d)
     size = comm.Get_size()
     k2li = defaultdict(list)
     for d in alldicts:
-        for (k,v) in d.items():
+        for (k, v) in d.items():
             k2li[k].append(v)
     k2mean = {}
-    for (k,li) in k2li.items():
+    for (k, li) in k2li.items():
         k2mean[k] = np.mean(li, axis=0) if len(li) == size else np.nan
     return k2mean
 
+
 class MpiAdamOptimizer(tf.train.AdamOptimizer):
     """Adam optimizer that averages gradients across mpi processes."""
+
     def __init__(self, comm, **kwargs):
         self.comm = comm
         tf.train.AdamOptimizer.__init__(self, **kwargs)
+
     def compute_gradients(self, loss, var_list, **kwargs):
-        grads_and_vars = tf.train.AdamOptimizer.compute_gradients(self, loss, var_list, **kwargs)
+        grads_and_vars = tf.train.AdamOptimizer.compute_gradients(
+            self, loss, var_list, **kwargs
+        )
         grads_and_vars = [(g, v) for g, v in grads_and_vars if g is not None]
         flat_grad = tf.concat([tf.reshape(g, (-1,)) for g, v in grads_and_vars], axis=0)
         shapes = [v.shape.as_list() for g, v in grads_and_vars]
@@ -147,8 +163,9 @@ class MpiAdamOptimizer(tf.train.AdamOptimizer):
         avg_flat_grad = tf.py_func(_collect_grads, [flat_grad], tf.float32)
         avg_flat_grad.set_shape(flat_grad.shape)
         avg_grads = tf.split(avg_flat_grad, sizes, axis=0)
-        avg_grads_and_vars = [(tf.reshape(g, v.shape), v)
-                    for g, (_, v) in zip(avg_grads, grads_and_vars)]
+        avg_grads_and_vars = [
+            (tf.reshape(g, v.shape), v) for g, (_, v) in zip(avg_grads, grads_and_vars)
+        ]
 
         return avg_grads_and_vars
 
@@ -156,15 +173,17 @@ class MpiAdamOptimizer(tf.train.AdamOptimizer):
 def mpi_mean(x, axis=0, comm=None, keepdims=False):
     x = np.asarray(x)
     assert x.ndim > 0
-    if comm is None: comm = MPI.COMM_WORLD
+    if comm is None:
+        comm = MPI.COMM_WORLD
     xsum = x.sum(axis=axis, keepdims=keepdims)
     n = xsum.size
-    localsum = np.zeros(n+1, x.dtype)
+    localsum = np.zeros(n + 1, x.dtype)
     localsum[:n] = xsum.ravel()
     localsum[n] = x.shape[axis]
     globalsum = np.zeros_like(localsum)
     comm.Allreduce(localsum, globalsum, op=MPI.SUM)
     return globalsum[:n].reshape(xsum.shape) / globalsum[n], globalsum[n]
+
 
 def mpi_moments(x, axis=0, comm=None, keepdims=False):
     x = np.asarray(x)
@@ -175,29 +194,34 @@ def mpi_moments(x, axis=0, comm=None, keepdims=False):
     assert count1 == count
     std = np.sqrt(meansqdiff)
     if not keepdims:
-        newshape = mean.shape[:axis] + mean.shape[axis+1:]
+        newshape = mean.shape[:axis] + mean.shape[axis + 1 :]
         mean = mean.reshape(newshape)
         std = std.reshape(newshape)
     return mean, std, count
 
+
 class RunningMeanStd(object):
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
     def __init__(self, epsilon=1e-4, shape=(), comm=None, use_mpi=True):
-        self.mean = np.zeros(shape, 'float64')
+        self.mean = np.zeros(shape, "float64")
         self.use_mpi = use_mpi
-        self.var = np.ones(shape, 'float64')
+        self.var = np.ones(shape, "float64")
         self.count = epsilon
         if comm is None:
             from mpi4py import MPI
+
             comm = MPI.COMM_WORLD
         self.comm = comm
-
 
     def update(self, x):
         if self.use_mpi:
             batch_mean, batch_std, batch_count = mpi_moments(x, axis=0, comm=self.comm)
         else:
-            batch_mean, batch_std, batch_count = np.mean(x, axis=0), np.std(x, axis=0), x.shape[0]
+            batch_mean, batch_std, batch_count = (
+                np.mean(x, axis=0),
+                np.std(x, axis=0),
+                x.shape[0],
+            )
         batch_var = np.square(batch_std)
         self.update_from_moments(batch_mean, batch_var, batch_count)
 
@@ -208,7 +232,11 @@ class RunningMeanStd(object):
         new_mean = self.mean + delta * batch_count / tot_count
         m_a = self.var * (self.count)
         m_b = batch_var * (batch_count)
-        M2 = m_a + m_b + np.square(delta) * self.count * batch_count / (self.count + batch_count)
+        M2 = (
+            m_a
+            + m_b
+            + np.square(delta) * self.count * batch_count / (self.count + batch_count)
+        )
         new_var = M2 / (self.count + batch_count)
 
         new_count = batch_count + self.count

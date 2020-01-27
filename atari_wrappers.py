@@ -1,11 +1,13 @@
-import numpy as np
 from collections import deque
-import gym
-from gym import spaces
-import cv2
 from copy import copy
 
+import cv2
+import gym
+import numpy as np
+from gym import spaces
+
 cv2.ocl.setUseOpenCL(False)
+
 
 def unwrap(env):
     if hasattr(env, "unwrapped"):
@@ -17,13 +19,14 @@ def unwrap(env):
     else:
         return env
 
+
 class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4):
         """Return only every `skip`-th frame"""
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
-        self._obs_buffer = np.zeros((2,)+env.observation_space.shape, dtype=np.uint8)
-        self._skip       = skip
+        self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
+        self._skip = skip
 
     def step(self, action):
         """Repeat action, sum reward, and max over last observations."""
@@ -31,8 +34,10 @@ class MaxAndSkipEnv(gym.Wrapper):
         done = None
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(action)
-            if i == self._skip - 2: self._obs_buffer[0] = obs
-            if i == self._skip - 1: self._obs_buffer[1] = obs
+            if i == self._skip - 2:
+                self._obs_buffer[0] = obs
+            if i == self._skip - 1:
+                self._obs_buffer[1] = obs
             total_reward += reward
             if done:
                 break
@@ -45,6 +50,7 @@ class MaxAndSkipEnv(gym.Wrapper):
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
 
+
 class ClipRewardEnv(gym.RewardWrapper):
     def __init__(self, env):
         gym.RewardWrapper.__init__(self, env)
@@ -53,19 +59,24 @@ class ClipRewardEnv(gym.RewardWrapper):
         """Bin reward to {+1, 0, -1} by its sign."""
         return float(np.sign(reward))
 
+
 class WarpFrame(gym.ObservationWrapper):
     def __init__(self, env):
         """Warp frames to 84x84 as done in the Nature paper and later work."""
         gym.ObservationWrapper.__init__(self, env)
         self.width = 84
         self.height = 84
-        self.observation_space = spaces.Box(low=0, high=255,
-            shape=(self.height, self.width, 1), dtype=np.uint8)
+        self.observation_space = spaces.Box(
+            low=0, high=255, shape=(self.height, self.width, 1), dtype=np.uint8
+        )
 
     def observation(self, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+        frame = cv2.resize(
+            frame, (self.width, self.height), interpolation=cv2.INTER_AREA
+        )
         return frame[:, :, None]
+
 
 class FrameStack(gym.Wrapper):
     def __init__(self, env, k):
@@ -81,7 +92,9 @@ class FrameStack(gym.Wrapper):
         self.k = k
         self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
-        self.observation_space = spaces.Box(low=0, high=255, shape=(shp[0], shp[1], shp[2] * k), dtype=np.uint8)
+        self.observation_space = spaces.Box(
+            low=0, high=255, shape=(shp[0], shp[1], shp[2] * k), dtype=np.uint8
+        )
 
     def reset(self):
         ob = self.env.reset()
@@ -98,6 +111,7 @@ class FrameStack(gym.Wrapper):
         assert len(self.frames) == self.k
         return LazyFrames(list(self.frames))
 
+
 class ScaledFloatFrame(gym.ObservationWrapper):
     def __init__(self, env):
         gym.ObservationWrapper.__init__(self, env)
@@ -106,6 +120,7 @@ class ScaledFloatFrame(gym.ObservationWrapper):
         # careful! This undoes the memory optimization, use
         # with smaller replay buffers only.
         return np.array(observation).astype(np.float32) / 255.0
+
 
 class LazyFrames(object):
     def __init__(self, frames):
@@ -137,6 +152,7 @@ class LazyFrames(object):
     def __getitem__(self, i):
         return self._force()[i]
 
+
 class MontezumaInfoWrapper(gym.Wrapper):
     def __init__(self, env, room_address):
         super(MontezumaInfoWrapper, self).__init__(env)
@@ -152,31 +168,31 @@ class MontezumaInfoWrapper(gym.Wrapper):
         obs, rew, done, info = self.env.step(action)
         self.visited_rooms.add(self.get_current_room())
         if done:
-            if 'episode' not in info:
-                info['episode'] = {}
-            info['episode'].update(visited_rooms=copy(self.visited_rooms))
+            if "episode" not in info:
+                info["episode"] = {}
+            info["episode"].update(visited_rooms=copy(self.visited_rooms))
             self.visited_rooms.clear()
         return obs, rew, done, info
 
     def reset(self):
         return self.env.reset()
 
-class DummyMontezumaInfoWrapper(gym.Wrapper):
 
+class DummyMontezumaInfoWrapper(gym.Wrapper):
     def __init__(self, env):
         super(DummyMontezumaInfoWrapper, self).__init__(env)
 
     def step(self, action):
         obs, rew, done, info = self.env.step(action)
         if done:
-            if 'episode' not in info:
-                info['episode'] = {}
-            info['episode'].update(pos_count=0,
-                                   visited_rooms=set([0]))
+            if "episode" not in info:
+                info["episode"] = {}
+            info["episode"].update(pos_count=0, visited_rooms=set([0]))
         return obs, rew, done, info
 
     def reset(self):
         return self.env.reset()
+
 
 class AddRandomStateToInfo(gym.Wrapper):
     def __init__(self, env):
@@ -187,9 +203,9 @@ class AddRandomStateToInfo(gym.Wrapper):
     def step(self, action):
         ob, r, d, info = self.env.step(action)
         if d:
-            if 'episode' not in info:
-                info['episode'] = {}
-            info['episode']['rng_at_episode_start'] = self.rng_at_episode_start
+            if "episode" not in info:
+                info["episode"] = {}
+            info["episode"]["rng_at_episode_start"] = self.rng_at_episode_start
         return ob, r, d, info
 
     def reset(self, **kwargs):
@@ -199,8 +215,8 @@ class AddRandomStateToInfo(gym.Wrapper):
 
 def make_atari(env_id, max_episode_steps=4500):
     env = gym.make(env_id)
-    env._max_episode_steps = max_episode_steps*4
-    assert 'NoFrameskip' in env.spec.id
+    env._max_episode_steps = max_episode_steps * 4
+    assert "NoFrameskip" in env.spec.id
     env = StickyActionEnv(env)
     env = MaxAndSkipEnv(env, skip=4)
     if "Montezuma" in env_id or "Pitfall" in env_id:
@@ -209,6 +225,7 @@ def make_atari(env_id, max_episode_steps=4500):
         env = DummyMontezumaInfoWrapper(env)
     env = AddRandomStateToInfo(env)
     return env
+
 
 def wrap_deepmind(env, clip_rewards=True, frame_stack=False, scale=False):
     """Configure environment for DeepMind-style Atari.
