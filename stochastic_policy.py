@@ -65,7 +65,7 @@ class StochasticPolicy(object):
         self.ph_ac = self.pdtype.sample_placeholder([None, None], name="ac")
         self.pd = self.vpred = self.ph_istate = None
 
-    def finalize(self, pd, vpred, ph_istate=None):  # pylint: disable=W0221
+    def finalize(self, pd, vpred, ph_istate=None):
         self.pd = pd
         self.vpred = vpred
         self.ph_istate = ph_istate

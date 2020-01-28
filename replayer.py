@@ -54,7 +54,6 @@ class EpisodeIterator(object):
                 self.episode_number += 1
                 if self.episode_number >= args["skip"]:
                     if "obs" in episode:
-                        # import ipdb; ipdb.set_trace()
                         yield episode
                     else:
                         unwrapped_env = env.unwrapped
@@ -104,8 +103,6 @@ class Animation(object):
         self.axes = {}
         self.lines = {}
         self.dots = {}
-        # self.ax1 = self.fig.add_subplot(1, 2, 1)
-        # self.ax2 = self.fig.add_subplot(1, 2, 2)
 
     def create_empty_figure(self):
         fig = plt.figure()
@@ -198,7 +195,7 @@ class Animation(object):
                 self.j = 0
             return [self.im] + list(self.lines.values()) + list(self.dots.values())
 
-        ani = animation.FuncAnimation(
+        animation.FuncAnimation(
             self.fig, draw_frame_i, blit=False, interval=1, repeat=False
         )
         plt.show()

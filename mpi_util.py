@@ -26,26 +26,6 @@ def sync_from_root(sess, variables, comm=None):
             sess.run(tf.assign(var, comm.bcast(None)))
 
 
-# def gpu_count():
-#     """
-#     Count the GPUs on this machine.
-#     """
-#     if shutil.which('nvidia-smi') is None:
-#         return 0
-#     output = subprocess.check_output(['nvidia-smi', '--query-gpu=gpu_name', '--format=csv'])
-#     return max(0, len(output.split(b'\n')) - 2)
-#
-# def setup_mpi_gpus():
-#     """
-#     Set CUDA_VISIBLE_DEVICES using MPI.
-#     """
-#     num_gpus = gpu_count()
-#     if num_gpus == 0:
-#         return
-#     local_rank, _ = get_local_rank_size(MPI.COMM_WORLD)
-#     os.environ['CUDA_VISIBLE_DEVICES'] = str(local_rank % num_gpus)
-
-
 def guess_available_gpus(n_gpus=None):
     if n_gpus is not None:
         return list(range(n_gpus))

@@ -309,7 +309,6 @@ class PpoAgent(object):
 
     @logger.profile("update")
     def update(self):
-
         # Some logic gathering best ret, rooms etc using MPI.
         temp = sum(MPI.COMM_WORLD.allgather(self.local_rooms), [])
         temp = sorted(list(set(temp)))

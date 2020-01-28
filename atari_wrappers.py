@@ -32,6 +32,7 @@ class MaxAndSkipEnv(gym.Wrapper):
         """Repeat action, sum reward, and max over last observations."""
         total_reward = 0.0
         done = None
+        info = None
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(action)
             if i == self._skip - 2:
@@ -67,13 +68,18 @@ class WarpFrame(gym.ObservationWrapper):
         self.width = 84
         self.height = 84
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(self.height, self.width, 1), dtype=np.uint8
+            low=0,
+            high=255,
+            shape=(self.height, self.width, 1),
+            dtype=np.uint8,
         )
 
     def observation(self, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         frame = cv2.resize(
-            frame, (self.width, self.height), interpolation=cv2.INTER_AREA
+            frame,
+            (self.width, self.height),
+            interpolation=cv2.INTER_AREA
         )
         return frame[:, :, None]
 
@@ -93,7 +99,10 @@ class FrameStack(gym.Wrapper):
         self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(shp[0], shp[1], shp[2] * k), dtype=np.uint8
+            low=0,
+            high=255,
+            shape=(shp[0], shp[1], shp[2] * k),
+            dtype=np.uint8,
         )
 
     def reset(self):
@@ -238,7 +247,6 @@ def wrap_deepmind(env, clip_rewards=True, frame_stack=False, scale=False):
         env = ClipRewardEnv(env)
     if frame_stack:
         env = FrameStack(env, 4)
-    # env = NormalizeObservation(env)
     return env
 
 

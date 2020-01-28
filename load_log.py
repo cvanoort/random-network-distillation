@@ -55,7 +55,6 @@ def pickle_cache_result(f):
                 try:
                     stored_hash, stored_result = pickle.load(fl)
                     if stored_hash == current_hash:
-                        # pass
                         return stored_result
                 except:
                     pass

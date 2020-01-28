@@ -5,7 +5,7 @@ import multiprocessing
 import os
 
 import numpy as np
-import tensorflow as tf  # pylint: ignore-module
+import tensorflow as tf
 
 
 def switch(condition, then_expression, else_expression):
@@ -97,7 +97,7 @@ def initialize():
 
 
 def normc_initializer(std=1.0, axis=0):
-    def _initializer(shape, dtype=None, partition_info=None):  # pylint: disable=W0613
+    def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
         out *= std / np.sqrt(np.square(out).sum(axis=axis, keepdims=True))
         return tf.constant(out)

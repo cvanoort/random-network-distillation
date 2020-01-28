@@ -6,11 +6,6 @@ from contextlib import contextmanager
 import numpy as np
 
 
-# ================================================================
-# Misc
-# ================================================================
-
-
 def fmt_row(width, row, header=False):
     out = " | ".join(fmt_item(x, width) for x in row)
     if header:
@@ -62,7 +57,7 @@ MESSAGE_DEPTH = 0
 
 @contextmanager
 def timed(msg):
-    global MESSAGE_DEPTH  # pylint: disable=W0603
+    global MESSAGE_DEPTH
     print(colorize("\t" * MESSAGE_DEPTH + "=: " + msg, color="magenta"))
     tstart = time.time()
     MESSAGE_DEPTH += 1

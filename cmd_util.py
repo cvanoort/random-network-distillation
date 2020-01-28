@@ -20,7 +20,7 @@ def make_atari_env(
     if wrapper_kwargs is None:
         wrapper_kwargs = {}
 
-    def make_env(rank):  # pylint: disable=C0111
+    def make_env(rank):
         def _thunk():
             env = make_atari(env_id, max_episode_steps=max_episode_steps)
             env.seed(seed + rank)
@@ -30,10 +30,7 @@ def make_atari_env(
                 allow_early_resets=True,
             )
             return wrap_deepmind(env, **wrapper_kwargs)
-
         return _thunk
-
-    # set_global_seeds(seed)
     return SubprocVecEnv([make_env(i + start_index) for i in range(num_env)])
 
 

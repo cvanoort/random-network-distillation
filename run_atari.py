@@ -129,7 +129,6 @@ def main():
     if MPI.COMM_WORLD.Get_rank() == 0:
         with open(os.path.join(logger.get_dir(), "experiment_tag.txt"), "w") as f:
             f.write(args.tag)
-        # shutil.copytree(os.path.dirname(os.path.abspath(__file__)), os.path.join(logger.get_dir(), 'code'))
 
     mpi_util.setup_mpi_gpus()
 

@@ -300,7 +300,6 @@ class CnnPolicy(StochasticPolicy):
                     )
                 )
                 rgbrp = to2d(xrp)
-                # X_r_hat = tf.nn.relu(fc(rgb[0], 'fc1r_hat1', nh=256 * enlargement, init_scale=np.sqrt(2)))
                 X_r_hat = tf.nn.relu(
                     fc(
                         rgbrp,
@@ -329,7 +328,6 @@ class CnnPolicy(StochasticPolicy):
         self.int_rew = tf.reshape(self.int_rew, (self.sy_nenvs, self.sy_nsteps - 1))
 
         targets = tf.stop_gradient(X_r)
-        # self.aux_loss = tf.reduce_mean(tf.square(noisy_targets-X_r_hat))
         self.aux_loss = tf.reduce_mean(tf.square(targets - X_r_hat), -1)
         mask = tf.random_uniform(
             shape=tf.shape(self.aux_loss), minval=0.0, maxval=1.0, dtype=tf.float32
@@ -446,7 +444,6 @@ class CnnPolicy(StochasticPolicy):
                 )
                 rgbrp = to2d(xrp)
 
-                # X_r_hat = tf.nn.relu(fc(rgb[0], 'fc1r_hat1', nh=256 * enlargement, init_scale=np.sqrt(2)))
                 X_r_hat = tf.nn.relu(
                     fc(
                         cond(rgbrp),
@@ -475,7 +472,6 @@ class CnnPolicy(StochasticPolicy):
         self.int_rew = tf.reshape(self.int_rew, (self.sy_nenvs, self.sy_nsteps - 1))
 
         noisy_targets = tf.stop_gradient(X_r)
-        # self.aux_loss = tf.reduce_mean(tf.square(noisy_targets-X_r_hat))
         self.aux_loss = tf.reduce_mean(tf.square(noisy_targets - X_r_hat), -1)
         mask = tf.random_uniform(
             shape=tf.shape(self.aux_loss), minval=0.0, maxval=1.0, dtype=tf.float32
@@ -505,8 +501,6 @@ class CnnPolicy(StochasticPolicy):
         feed1.update(
             {self.ph_mean: self.ob_rms.mean, self.ph_std: self.ob_rms.var ** 0.5}
         )
-        # for f in feed1:
-        #     print(f)
         a, vpred_int, vpred_ext, nlp, newstate, ent = tf.get_default_session().run(
             [
                 self.a_samp,
