@@ -3,9 +3,12 @@ from collections import OrderedDict
 import tensorflow as tf
 from baselines.common.distributions import make_pdtype
 from gym import spaces
+import numpy as np
 
 
 def canonical_dtype(orig_dt):
+    print(orig_dt, orig_dt.kind, type(orig_dt))
+
     if orig_dt.kind == "f":
         return tf.float32
     elif orig_dt.kind in "iu":
@@ -44,9 +47,9 @@ class StochasticPolicy(object):
             print(ob_space)
             box = ob_space
             assert isinstance(box, spaces.Box)
-            self.ph_ob_keys = [None]
-            self.ph_ob_dtypes = {None: box.dtype}
-            shapes = {None: box.shape}
+            self.ph_ob_keys = ['obs']
+            self.ph_ob_dtypes = {'obs': box.dtype}
+            shapes = {'obs': box.shape}
 
         if self.meta_rl and getattr(ac_space, 'n', False):
             self.ph_ob_keys.append('prev_acs')
@@ -56,7 +59,7 @@ class StochasticPolicy(object):
             print(ac_space)
             self.ph_ob_dtypes['prev_acs'] = ac_space.dtype
             shapes['prev_acs'] = ac_space.shape
-            self.ph_ob_dtypes['prev_rew'] = float
+            self.ph_ob_dtypes['prev_rew'] = np.dtype('float32')
             shapes['prev_rew'] = (1,)
 
         self.ph_ob = OrderedDict(
@@ -66,7 +69,7 @@ class StochasticPolicy(object):
                     tf.placeholder(
                         canonical_dtype(self.ph_ob_dtypes[k]),
                         (None, None,) + tuple(shapes[k]),
-                        name=(("obs/%s" % k) if k is not None else "obs"),
+                        name=(k if k is 'obs' else f'obs/{k}'),
                     ),
                 )
                 for k in self.ph_ob_keys
@@ -88,8 +91,9 @@ class StochasticPolicy(object):
         self.ph_istate = ph_istate
 
     def ensure_observation_is_dict(self, ob):
-        if self.ph_ob_keys == [None]:
-            return {None: ob}
+        print(self.ph_ob_keys)
+        if (self.ph_ob_keys == ['obs']) or (self.ph_ob_keys == ['obs', 'prev_acs', 'prev_rew']):
+            return {'obs': ob}
         else:
             return ob
 

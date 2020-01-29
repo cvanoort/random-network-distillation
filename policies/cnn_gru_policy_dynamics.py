@@ -95,7 +95,7 @@ class CnnGruPolicy(StochasticPolicy):
             self.vpred_ext_opt,
             self.snext_opt,
         ) = self.apply_policy(
-            self.ph_ob[None][:, :-1],
+            self.ph_ob['obs'][:, :-1],
             ph_new=self.ph_new,
             ph_istate=ph_istate,
             reuse=False,
@@ -114,7 +114,7 @@ class CnnGruPolicy(StochasticPolicy):
             self.vpred_ext_rollout,
             self.snext_rollout,
         ) = self.apply_policy(
-            self.ph_ob[None],
+            self.ph_ob['obs'],
             ph_new=self.ph_new,
             ph_istate=ph_istate,
             reuse=True,
@@ -511,6 +511,7 @@ class CnnGruPolicy(StochasticPolicy):
         return np.zeros((n, self.memsize), np.float32)
 
     def call(self, dict_obs, new, istate, update_obs_stats=False):
+        print(dict_obs)
         for ob in dict_obs.values():
             if ob is not None:
                 if update_obs_stats:

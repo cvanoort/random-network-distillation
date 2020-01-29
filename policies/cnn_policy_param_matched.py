@@ -77,7 +77,7 @@ class CnnPolicy(StochasticPolicy):
             self.vpred_ext_opt,
             self.snext_opt,
         ) = self.apply_policy(
-            self.ph_ob[None][:, :-1],
+            self.ph_ob['obs'][:, :-1],
             reuse=False,
             scope=scope,
             hidsize=hidsize,
@@ -93,7 +93,7 @@ class CnnPolicy(StochasticPolicy):
             self.vpred_ext_rollout,
             self.snext_rollout,
         ) = self.apply_policy(
-            self.ph_ob[None],
+            self.ph_ob['obs'],
             reuse=True,
             scope=scope,
             hidsize=hidsize,
@@ -487,6 +487,7 @@ class CnnPolicy(StochasticPolicy):
         return np.zeros((n, self.memsize), np.float32)
 
     def call(self, dict_obs, new, istate, update_obs_stats=False):
+        print(dict_obs)
         for ob in dict_obs.values():
             if ob is not None:
                 if update_obs_stats:

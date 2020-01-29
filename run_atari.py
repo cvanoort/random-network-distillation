@@ -57,7 +57,7 @@ def train(*, env_id, num_env, hps, num_timesteps, seed):
                 "proportion_of_exp_used_for_predictor_update"
             ),
             dynamics_bonus=hps.pop("dynamics_bonus"),
-            meta_rl=hps.pop("meta_rl")
+            meta_rl=hps['meta_rl']
         ),
         gamma=gamma,
         gamma_ext=hps.pop("gamma_ext"),
@@ -74,6 +74,7 @@ def train(*, env_id, num_env, hps, num_timesteps, seed):
         update_ob_stats_every_step=hps.pop("update_ob_stats_every_step"),
         int_coeff=hps.pop("int_coeff"),
         ext_coeff=hps.pop("ext_coeff"),
+        meta_rl=hps.pop('meta_rl')
     )
     agent.start_interaction([venv])
     if hps.pop("update_ob_stats_from_random_agent"):

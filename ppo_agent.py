@@ -134,6 +134,7 @@ class PpoAgent(object):
         update_ob_stats_every_step=True,
         int_coeff=None,
         ext_coeff=None,
+        meta_rl=False,
     ):
         self.lr = lr
         self.ext_coeff = ext_coeff
@@ -142,6 +143,9 @@ class PpoAgent(object):
         self.update_ob_stats_every_step = update_ob_stats_every_step
         self.abs_scope = (tf.get_variable_scope().name + "/" + scope).lstrip("/")
         self.testing = testing
+
+        self.meta_rl = meta_rl
+
         self.comm_log = MPI.COMM_SELF
         if comm is not None and comm.Get_size() > 1:
             self.comm_log = comm
@@ -614,6 +618,11 @@ class PpoAgent(object):
             sli = slice(l * self.I.lump_stride, (l + 1) * self.I.lump_stride)
             memsli = slice(None) if self.I.mem_state is NO_STATES else sli
             dict_obs = self.stochpol.ensure_observation_is_dict(obs)
+
+            if self.meta_rl:
+                dict_obs['prev_acs'] = self.I.buf_acs[sli, t - 1]
+                dict_obs['prev_rew'] = self.I.buf_rews_ext[sli, t - 2]
+
             with logger.ProfileKV("policy_inference"):
                 # Calls the policy and value function on current observation.
                 (
