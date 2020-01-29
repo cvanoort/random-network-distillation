@@ -60,20 +60,20 @@ class InteractionState(object):
         self.buf_news = np.zeros((nenvs, nsteps), np.float32)
         self.buf_ent = np.zeros((nenvs, nsteps), np.float32)
         self.mem_state = stochpol.initial_state(nenvs)
-        self.seg_init_mem_state = copy(
-            self.mem_state
-        )  # Memory state at beginning of segment of timesteps
+        # Memory state at beginning of segment of timesteps
+        self.seg_init_mem_state = copy(self.mem_state)
         self.rff_int = RewardForwardFilter(gamma)
         self.rff_rms_int = RunningMeanStd(comm=comm, use_mpi=True)
         self.buf_new_last = self.buf_news[:, 0, ...].copy()
         self.buf_vpred_int_last = self.buf_vpreds_int[:, 0, ...].copy()
         self.buf_vpred_ext_last = self.buf_vpreds_ext[:, 0, ...].copy()
-        self.step_count = 0  # counts number of timesteps that you've interacted with this set of environments
+        # Number of timesteps that you've interacted with this set of environments
+        self.step_count = 0
         self.t_last_update = time.time()
-        self.statlists = defaultdict(
-            lambda: deque([], maxlen=100)
-        )  # Count other stats, e.g. optimizer outputs
-        self.stats = defaultdict(float)  # Count episodes and timesteps
+        # Count other stats, e.g. optimizer outputs
+        self.statlists = defaultdict(lambda: deque([], maxlen=100))
+        # Count episodes and timesteps
+        self.stats = defaultdict(float)
         self.stats["epcount"] = 0
         self.stats["n_updates"] = 0
         self.stats["tcount"] = 0
@@ -573,9 +573,8 @@ class PpoAgent(object):
         Get most recent (obs, rews, dones, infos) from vectorized environment
         Using step_wait if necessary
         """
-        if (
-            self.I.step_count == 0
-        ):  # On the zeroth step with a new venv, we need to call reset on the environment
+        # On the zeroth step with a new venv, we need to call reset on the environment
+        if self.I.step_count == 0:
             ob = self.I.venvs[l].reset()
             out = self.I.env_results[l] = (
                 ob,

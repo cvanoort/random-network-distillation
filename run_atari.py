@@ -57,6 +57,7 @@ def train(*, env_id, num_env, hps, num_timesteps, seed):
                 "proportion_of_exp_used_for_predictor_update"
             ),
             dynamics_bonus=hps.pop("dynamics_bonus"),
+            meta_rl=hps.pop("meta_rl")
         ),
         gamma=gamma,
         gamma_ext=hps.pop("gamma_ext"),
@@ -120,6 +121,11 @@ def main():
     parser.add_argument("--int_coeff", type=float, default=1.0)
     parser.add_argument("--ext_coeff", type=float, default=2.0)
     parser.add_argument("--dynamics_bonus", type=int, default=0)
+    parser.add_argument(
+        "--meta_rl",
+        type=lambda x: True if x.lower() in {'true', 't'} else False,
+        default=False,
+    )
 
     args = parser.parse_args()
     logger.configure(
@@ -154,6 +160,7 @@ def main():
         int_coeff=args.int_coeff,
         ext_coeff=args.ext_coeff,
         dynamics_bonus=args.dynamics_bonus,
+        meta_rl=args.meta_rl,
     )
 
     tf_util.make_session(make_default=True)

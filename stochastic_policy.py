@@ -15,7 +15,7 @@ def canonical_dtype(orig_dt):
 
 
 class StochasticPolicy(object):
-    def __init__(self, scope, ob_space, ac_space):
+    def __init__(self, scope, ob_space, ac_space, meta_rl=False):
         self.abs_scope = (tf.get_variable_scope().name + "/" + scope).lstrip("/")
         self.ob_space = ob_space
         self.ac_space = ac_space
@@ -23,14 +23,19 @@ class StochasticPolicy(object):
         self.ph_new = tf.placeholder(dtype=tf.float32, shape=(None, None), name="new")
         self.ph_ob_keys = []
         self.ph_ob_dtypes = {}
+
+        self.meta_rl = meta_rl
+
         shapes = {}
         if isinstance(ob_space, spaces.Dict):
             assert isinstance(ob_space.spaces, OrderedDict)
             for key, box in ob_space.spaces.items():
                 assert isinstance(box, spaces.Box)
                 self.ph_ob_keys.append(key)
-            # Keys must be ordered, because tf.concat(ph) depends on order. Here we don't keep OrderedDict
-            # order and sort keys instead. Rationale is to give freedom to modify environment.
+
+            # Keys must be ordered, because tf.concat(ph) depends on order.
+            # Here we don't keep OrderedDict order and sort keys instead.
+            # Rationale is to give freedom to modify environment.
             self.ph_ob_keys.sort()
             for k in self.ph_ob_keys:
                 self.ph_ob_dtypes[k] = ob_space.spaces[k].dtype
@@ -42,6 +47,18 @@ class StochasticPolicy(object):
             self.ph_ob_keys = [None]
             self.ph_ob_dtypes = {None: box.dtype}
             shapes = {None: box.shape}
+
+        if self.meta_rl and getattr(ac_space, 'n', False):
+            self.ph_ob_keys.append('prev_acs')
+            self.ph_ob_keys.append('prev_rew')
+            self.ph_ob_keys.sort()
+
+            print(ac_space)
+            self.ph_ob_dtypes['prev_acs'] = ac_space.dtype
+            shapes['prev_acs'] = ac_space.shape
+            self.ph_ob_dtypes['prev_rew'] = float
+            shapes['prev_rew'] = (1,)
+
         self.ph_ob = OrderedDict(
             [
                 (

@@ -30,21 +30,21 @@ def _normalize(x):
 
 class CnnPolicy(StochasticPolicy):
     def __init__(
-        self,
-        scope,
-        ob_space,
-        ac_space,
-        policy_size="normal",
-        maxpool=False,
-        extrahid=True,
-        hidsize=128,
-        memsize=128,
-        rec_gate_init=0.0,
-        update_ob_stats_independently_per_gpu=True,
-        proportion_of_exp_used_for_predictor_update=1.0,
-        dynamics_bonus=False,
+            self,
+            scope,
+            ob_space,
+            ac_space,
+            policy_size="normal",
+            extrahid=True,
+            hidsize=128,
+            memsize=128,
+            rec_gate_init=0.0,
+            update_ob_stats_independently_per_gpu=True,
+            proportion_of_exp_used_for_predictor_update=1.0,
+            dynamics_bonus=False,
+            meta_rl=False,
     ):
-        StochasticPolicy.__init__(self, scope, ob_space, ac_space)
+        StochasticPolicy.__init__(self, scope, ob_space, ac_space, meta_rl=meta_rl)
         self.proportion_of_exp_used_for_predictor_update = (
             proportion_of_exp_used_for_predictor_update
         )
@@ -124,15 +124,15 @@ class CnnPolicy(StochasticPolicy):
 
     @staticmethod
     def apply_policy(
-        ph_ob,
-        reuse,
-        scope,
-        hidsize,
-        memsize,
-        extrahid,
-        sy_nenvs,
-        sy_nsteps,
-        pdparamsize,
+            ph_ob,
+            reuse,
+            scope,
+            hidsize,
+            memsize,
+            extrahid,
+            sy_nenvs,
+            sy_nsteps,
+            pdparamsize,
     ):
         data_format = "NHWC"
         ph = ph_ob
@@ -146,7 +146,7 @@ class CnnPolicy(StochasticPolicy):
         activ = tf.nn.relu
         yes_gpu = any(get_available_gpus())
         with tf.variable_scope(scope, reuse=reuse), tf.device(
-            "/gpu:0" if yes_gpu else "/cpu:0"
+                "/gpu:0" if yes_gpu else "/cpu:0"
         ):
             X = activ(
                 conv(
