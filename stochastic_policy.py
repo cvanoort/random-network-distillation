@@ -58,7 +58,7 @@ class StochasticPolicy(object):
 
             print(ac_space)
             self.ph_ob_dtypes['prev_acs'] = ac_space.dtype
-            shapes['prev_acs'] = ac_space.shape
+            shapes['prev_acs'] = (ac_space.n, )
             self.ph_ob_dtypes['prev_rew'] = np.dtype('float32')
             shapes['prev_rew'] = (1,)
 
@@ -91,7 +91,6 @@ class StochasticPolicy(object):
         self.ph_istate = ph_istate
 
     def ensure_observation_is_dict(self, ob):
-        print(self.ph_ob_keys)
         if (self.ph_ob_keys == ['obs']) or (self.ph_ob_keys == ['obs', 'prev_acs', 'prev_rew']):
             return {'obs': ob}
         else:

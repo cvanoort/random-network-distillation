@@ -464,7 +464,7 @@ class PpoAgent(object):
             "ret_ext": rets_ext,
         }
         if self.I.venvs[0].record_obs:
-            to_record["obs"] = self.I.buf_obs[None]
+            to_record["obs"] = self.I.buf_obs['obs']
         self.recorder.record(bufs=to_record, infos=self.I.buf_epinfos)
 
         # Create feeddict for optimization.
@@ -508,18 +508,18 @@ class PpoAgent(object):
 
             fd = {ph: buf[mbenvinds] for (ph, buf) in ph_buf}
             fd.update({self.ph_lr: self.lr, self.ph_cliprange: self.cliprange})
-            fd[self.stochpol.ph_ob[None]] = np.concatenate(
+            fd[self.stochpol.ph_ob['obs']] = np.concatenate(
                 [
-                    self.I.buf_obs[None][mbenvinds],
-                    self.I.buf_ob_last[None][mbenvinds, None],
+                    self.I.buf_obs['obs'][mbenvinds],
+                    self.I.buf_ob_last['obs'][mbenvinds, None],
                 ],
                 1,
             )
-            assert list(fd[self.stochpol.ph_ob[None]].shape) == [
+            assert list(fd[self.stochpol.ph_ob['obs']].shape) == [
                 self.I.nenvs // self.nminibatches,
                 self.nsteps + 1,
             ] + list(self.ob_space.shape), [
-                fd[self.stochpol.ph_ob[None]].shape,
+                fd[self.stochpol.ph_ob['obs']].shape,
                 [self.I.nenvs // self.nminibatches, self.nsteps + 1]
                 + list(self.ob_space.shape),
             ]
@@ -620,8 +620,19 @@ class PpoAgent(object):
             dict_obs = self.stochpol.ensure_observation_is_dict(obs)
 
             if self.meta_rl:
-                dict_obs['prev_acs'] = self.I.buf_acs[sli, t - 1]
-                dict_obs['prev_rew'] = self.I.buf_rews_ext[sli, t - 2]
+                def one_hot(a, max_val, squeeze=True):
+                    """
+                    Reference:
+                        https://stackoverflow.com/questions/29831489/convert-array-of-indices-to-1-hot-encoded-numpy-array
+                    """
+                    b = np.eye(max_val)[a]
+                    if squeeze:
+                        b = np.squeeze(b)
+                    print(a.shape, b.shape)
+                    return b
+
+                dict_obs['prev_acs'] = one_hot(self.I.buf_acs, self.ac_space.n)
+                dict_obs['prev_rew'] = self.I.buf_rews_ext[..., None]
 
             with logger.ProfileKV("policy_inference"):
                 # Calls the policy and value function on current observation.
@@ -682,8 +693,8 @@ class PpoAgent(object):
 
             # Calcuate the intrinsic rewards for the rollout.
             fd = {}
-            fd[self.stochpol.ph_ob[None]] = np.concatenate(
-                [self.I.buf_obs[None], self.I.buf_ob_last[None][:, None]], 1
+            fd[self.stochpol.ph_ob['obs']] = np.concatenate(
+                [self.I.buf_obs['obs'], self.I.buf_ob_last['obs'][:, None]], 1
             )
             fd.update(
                 {
@@ -698,7 +709,7 @@ class PpoAgent(object):
 
             if not self.update_ob_stats_every_step:
                 # Update observation normalization parameters after the rollout is completed.
-                obs_ = self.I.buf_obs[None].astype(np.float32)
+                obs_ = self.I.buf_obs['obs'].astype(np.float32)
                 self.stochpol.ob_rms.update(
                     obs_.reshape((-1, *obs_.shape[2:]))[:, :, :, -1:]
                 )

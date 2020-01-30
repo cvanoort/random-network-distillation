@@ -511,7 +511,6 @@ class CnnGruPolicy(StochasticPolicy):
         return np.zeros((n, self.memsize), np.float32)
 
     def call(self, dict_obs, new, istate, update_obs_stats=False):
-        print(dict_obs)
         for ob in dict_obs.values():
             if ob is not None:
                 if update_obs_stats:
@@ -521,11 +520,31 @@ class CnnGruPolicy(StochasticPolicy):
                     self.ob_rms.update(ob)
         # Note: if it fails here with ph vs observations inconsistency, check if you're loading agent from disk.
         # It will use whatever observation spaces saved to disk along with other ctor params.
-        feed1 = {self.ph_ob[k]: dict_obs[k][:, None] for k in self.ph_ob_keys}
-        feed2 = {self.ph_istate: istate, self.ph_new: new[:, None].astype(np.float32)}
-        feed1.update(
-            {self.ph_mean: self.ob_rms.mean, self.ph_std: self.ob_rms.var ** 0.5}
-        )
+        feed1 = {
+            self.ph_ob[k]: dict_obs[k]
+            for k in self.ph_ob_keys
+            if k != 'obs'
+        }
+        feed1.update({
+            self.ph_mean: self.ob_rms.mean,
+            self.ph_std: self.ob_rms.var ** 0.
+        })
+
+        # Add an extra empty dimension to the primary observation if needed
+        if len(dict_obs['obs'].shape) == 4:
+            feed1[self.ph_ob['obs']] = dict_obs['obs'][:, None]
+        else:
+            feed1[self.ph_ob['obs']] = dict_obs['obs']
+
+        feed2 = {
+            self.ph_istate: istate,
+            self.ph_new: new[:, None].astype(np.float32)
+        }
+
+        # Add an extra empty dimension to the primary observation if needed
+        if ('obs' in feed1.keys()) and (len(feed1['obs'].shape) < 5):
+            feed1['obs'] = feed1['obs'][:, None]
+
         a, vpred_int, vpred_ext, nlp, newstate, ent = tf.get_default_session().run(
             [
                 self.a_samp,
