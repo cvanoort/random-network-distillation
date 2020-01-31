@@ -109,7 +109,7 @@ def main():
     parser.add_argument("--num_env", type=int, default=32)
     parser.add_argument("--use_news", type=int, default=0)
     parser.add_argument("--gamma", type=float, default=0.99)
-    parser.add_argument("--gamma_ext", type=float, default=0.99)
+    parser.add_argument("--gamma_ext", type=float, default=0.999)
     parser.add_argument("--lam", type=float, default=0.95)
     parser.add_argument("--update_ob_stats_every_step", type=int, default=0)
     parser.add_argument("--update_ob_stats_independently_per_gpu", type=int, default=0)

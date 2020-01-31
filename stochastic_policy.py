@@ -57,7 +57,7 @@ class StochasticPolicy(object):
             self.ph_ob_keys.sort()
 
             print(ac_space)
-            self.ph_ob_dtypes['prev_acs'] = ac_space.dtype
+            self.ph_ob_dtypes['prev_acs'] = np.dtype('float32')
             shapes['prev_acs'] = (ac_space.n, )
             self.ph_ob_dtypes['prev_rew'] = np.dtype('float32')
             shapes['prev_rew'] = (1,)

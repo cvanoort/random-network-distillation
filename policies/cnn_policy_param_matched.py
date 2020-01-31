@@ -10,6 +10,7 @@ from utils import fc, conv, ortho_init
 
 def to2d(x):
     size = 1
+    print(x.get_shape())
     for shapel in x.get_shape()[1:]:
         size *= shapel.value
     return tf.reshape(x, (-1, size))
@@ -86,6 +87,7 @@ class CnnPolicy(StochasticPolicy):
             sy_nenvs=self.sy_nenvs,
             sy_nsteps=self.sy_nsteps - 1,
             pdparamsize=pdparamsize,
+            additional_inputs=self.ph_ob,
         )
         (
             self.pdparam_rollout,
@@ -102,6 +104,7 @@ class CnnPolicy(StochasticPolicy):
             sy_nenvs=self.sy_nenvs,
             sy_nsteps=self.sy_nsteps,
             pdparamsize=pdparamsize,
+            additional_inputs=self.ph_ob,
         )
         if dynamics_bonus:
             self.define_dynamics_prediction_rew(
@@ -133,7 +136,9 @@ class CnnPolicy(StochasticPolicy):
             sy_nenvs,
             sy_nsteps,
             pdparamsize,
+            additional_inputs=None,
     ):
+        meta_rl = False
         data_format = "NHWC"
         ph = ph_ob
         assert len(ph.shape.as_list()) == 5  # B,T,H,W,C
@@ -183,6 +188,19 @@ class CnnPolicy(StochasticPolicy):
             )
             X = to2d(X)
             mix_other_observations = [X]
+
+            if ('prev_acs' in additional_inputs) and ('prev_rew' in additional_inputs):
+                # Cast numpy arrays to tf tensors
+                prev_acs = tf.cast(additional_inputs['prev_acs'], tf.float32)
+                prev_rew = tf.cast(additional_inputs['prev_rew'], tf.float32)
+
+                # Flatten out time dimension
+                prev_acs = tf.reshape(prev_acs, (-1, *prev_acs.shape.as_list()[2:]))
+                prev_rew = tf.reshape(prev_rew, (-1, *prev_rew.shape.as_list()[2:]))
+
+                # Add to 2D features going to FC layers
+                mix_other_observations.extend([prev_acs, prev_rew])
+
             X = tf.concat(mix_other_observations, axis=1)
             X = activ(fc(X, "fc1", nh=hidsize, init_scale=np.sqrt(2)))
             additional_size = 448

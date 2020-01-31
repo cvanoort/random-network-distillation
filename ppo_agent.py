@@ -83,6 +83,17 @@ class InteractionState(object):
             venv.close()
 
 
+def one_hot(a, max_val, squeeze=True):
+    """
+    Reference:
+        https://stackoverflow.com/questions/29831489/convert-array-of-indices-to-1-hot-encoded-numpy-array
+    """
+    b = np.eye(max_val)[a]
+    if squeeze:
+        b = np.squeeze(b)
+    return b
+
+
 def dict_gather(comm, d, op="mean"):
     if comm is None:
         return d
@@ -109,32 +120,32 @@ class PpoAgent(object):
     envs = None
 
     def __init__(
-        self,
-        *,
-        scope,
-        ob_space,
-        ac_space,
-        stochpol_fn,
-        nsteps,
-        nepochs=4,
-        nminibatches=1,
-        gamma=0.99,
-        gamma_ext=0.99,
-        lam=0.95,
-        ent_coef=0,
-        cliprange=0.2,
-        max_grad_norm=1.0,
-        vf_coef=1.0,
-        lr=30e-5,
-        adam_hps=None,
-        testing=False,
-        comm=None,
-        comm_train=None,
-        use_news=False,
-        update_ob_stats_every_step=True,
-        int_coeff=None,
-        ext_coeff=None,
-        meta_rl=False,
+            self,
+            *,
+            scope,
+            ob_space,
+            ac_space,
+            stochpol_fn,
+            nsteps,
+            nepochs=4,
+            nminibatches=1,
+            gamma=0.99,
+            gamma_ext=0.99,
+            lam=0.95,
+            ent_coef=0,
+            cliprange=0.2,
+            max_grad_norm=1.0,
+            vf_coef=1.0,
+            lr=30e-5,
+            adam_hps=None,
+            testing=False,
+            comm=None,
+            comm_train=None,
+            use_news=False,
+            update_ob_stats_every_step=True,
+            int_coeff=None,
+            ext_coeff=None,
+            meta_rl=False,
     ):
         self.lr = lr
         self.ext_coeff = ext_coeff
@@ -150,7 +161,7 @@ class PpoAgent(object):
         if comm is not None and comm.Get_size() > 1:
             self.comm_log = comm
             assert (
-                not testing or comm.Get_rank() != 0
+                    not testing or comm.Get_rank() != 0
             ), "Worker number zero can't be testing"
         if comm_train is not None:
             self.comm_train, self.comm_train_size = comm_train, comm_train.Get_size()
@@ -301,8 +312,8 @@ class PpoAgent(object):
                 if len(all_ob) % (128 * self.I.nlump) == 0:
                     ob_ = (
                         np.asarray(all_ob)
-                        .astype(np.float32)
-                        .reshape((-1, *self.ob_space.shape))
+                            .astype(np.float32)
+                            .reshape((-1, *self.ob_space.shape))
                     )
                     self.stochpol.ob_rms.update(ob_[:, :, :, -1:])
                     all_ob.clear()
@@ -376,12 +387,12 @@ class PpoAgent(object):
             )
             nextnotnew = 1 - nextnew
             delta = (
-                rews_int[:, t]
-                + self.gamma * nextvals * nextnotnew
-                - self.I.buf_vpreds_int[:, t]
+                    rews_int[:, t]
+                    + self.gamma * nextvals * nextnotnew
+                    - self.I.buf_vpreds_int[:, t]
             )
             self.I.buf_advs_int[:, t] = lastgaelam = (
-                delta + self.gamma * self.lam * nextnotnew * lastgaelam
+                    delta + self.gamma * self.lam * nextnotnew * lastgaelam
             )
         rets_int = self.I.buf_advs_int + self.I.buf_vpreds_int
 
@@ -401,18 +412,18 @@ class PpoAgent(object):
             )
             nextnotnew = 1 - nextnew
             delta = (
-                rews_ext[:, t]
-                + self.gamma_ext * nextvals * nextnotnew
-                - self.I.buf_vpreds_ext[:, t]
+                    rews_ext[:, t]
+                    + self.gamma_ext * nextvals * nextnotnew
+                    - self.I.buf_vpreds_ext[:, t]
             )
             self.I.buf_advs_ext[:, t] = lastgaelam = (
-                delta + self.gamma_ext * self.lam * nextnotnew * lastgaelam
+                    delta + self.gamma_ext * self.lam * nextnotnew * lastgaelam
             )
         rets_ext = self.I.buf_advs_ext + self.I.buf_vpreds_ext
 
         # Combine the extrinsic and intrinsic advantages.
         self.I.buf_advs = (
-            self.int_coeff * self.I.buf_advs_int + self.ext_coeff * self.I.buf_advs_ext
+                self.int_coeff * self.I.buf_advs_int + self.ext_coeff * self.I.buf_advs_ext
         )
 
         # Collects info for reporting.
@@ -515,6 +526,11 @@ class PpoAgent(object):
                 ],
                 1,
             )
+
+            if self.meta_rl:
+                fd[self.stochpol.ph_ob['prev_acs']] = one_hot(self.I.buf_acs[mbenvinds], self.ac_space.n)
+                fd[self.stochpol.ph_ob['prev_rew']] = self.I.buf_rews_ext[mbenvinds]
+
             assert list(fd[self.stochpol.ph_ob['obs']].shape) == [
                 self.I.nenvs // self.nminibatches,
                 self.nsteps + 1,
@@ -563,7 +579,8 @@ class PpoAgent(object):
             info["tps"] = self.nsteps * self.I.nenvs / (tnow - self.I.t_last_update)
             info["time_elapsed"] = time.time() - self.t0
             self.I.t_last_update = tnow
-        self.stochpol.update_normalization(  # Necessary for continuous control tasks with odd obs ranges, only implemented in mlp policy,
+        self.stochpol.update_normalization(
+            # Necessary for continuous control tasks with odd obs ranges, only implemented in mlp policy,
             ob=self.I.buf_obs  # NOTE: not shared via MPI
         )
         return info
@@ -620,19 +637,8 @@ class PpoAgent(object):
             dict_obs = self.stochpol.ensure_observation_is_dict(obs)
 
             if self.meta_rl:
-                def one_hot(a, max_val, squeeze=True):
-                    """
-                    Reference:
-                        https://stackoverflow.com/questions/29831489/convert-array-of-indices-to-1-hot-encoded-numpy-array
-                    """
-                    b = np.eye(max_val)[a]
-                    if squeeze:
-                        b = np.squeeze(b)
-                    print(a.shape, b.shape)
-                    return b
-
-                dict_obs['prev_acs'] = one_hot(self.I.buf_acs, self.ac_space.n)
-                dict_obs['prev_rew'] = self.I.buf_rews_ext[..., None]
+                dict_obs['prev_acs'] = one_hot(self.I.buf_acs[sli, t - 1], self.ac_space.n)[:, None]
+                dict_obs['prev_rew'] = self.I.buf_rews_ext[sli, t - 1, None, None]
 
             with logger.ProfileKV("policy_inference"):
                 # Calls the policy and value function on current observation.
@@ -653,7 +659,12 @@ class PpoAgent(object):
 
             # Update buffer with transition.
             for k in self.stochpol.ph_ob_keys:
-                self.I.buf_obs[k][sli, t] = dict_obs[k]
+                if k == 'prev_acs':
+                    self.I.buf_obs[k][sli, t] = np.squeeze(dict_obs[k])
+                elif k == 'prev_rew':
+                    self.I.buf_obs[k][sli, t] = np.squeeze(dict_obs[k])[..., None]
+                else:
+                    self.I.buf_obs[k][sli, t] = dict_obs[k]
             self.I.buf_news[sli, t] = news
             self.I.buf_vpreds_int[sli, t] = vpreds_int
             self.I.buf_vpreds_ext[sli, t] = vpreds_ext
@@ -672,8 +683,19 @@ class PpoAgent(object):
                 memsli = slice(None) if self.I.mem_state is NO_STATES else sli
                 nextobs, rews, nextnews, _ = self.env_get(l)
                 dict_nextobs = self.stochpol.ensure_observation_is_dict(nextobs)
+
+                if self.meta_rl:
+                    dict_nextobs['prev_acs'] = one_hot(self.I.buf_acs[sli, t], self.ac_space.n)[:, None]
+                    dict_nextobs['prev_rew'] = self.I.buf_rews_ext[sli, t, None, None]
+
                 for k in self.stochpol.ph_ob_keys:
-                    self.I.buf_ob_last[k][sli] = dict_nextobs[k]
+                    if k == 'prev_acs':
+                        self.I.buf_obs[k][sli, t] = np.squeeze(dict_nextobs[k])
+                    elif k == 'prev_rew':
+                        self.I.buf_obs[k][sli, t] = np.squeeze(dict_nextobs[k])[..., None]
+                    else:
+                        self.I.buf_ob_last[k][sli] = dict_nextobs[k]
+
                 self.I.buf_new_last[sli] = nextnews
                 with logger.ProfileKV("policy_inference"):
                     (
