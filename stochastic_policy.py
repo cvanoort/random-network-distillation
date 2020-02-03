@@ -56,7 +56,6 @@ class StochasticPolicy(object):
             self.ph_ob_keys.append('prev_rew')
             self.ph_ob_keys.sort()
 
-            print(ac_space)
             self.ph_ob_dtypes['prev_acs'] = np.dtype('float32')
             shapes['prev_acs'] = (ac_space.n, )
             self.ph_ob_dtypes['prev_rew'] = np.dtype('float32')
@@ -75,10 +74,7 @@ class StochasticPolicy(object):
                 for k in self.ph_ob_keys
             ]
         )
-        assert list(self.ph_ob.keys()) == self.ph_ob_keys, "\n%s\n%s\n" % (
-            list(self.ph_ob.keys()),
-            self.ph_ob_keys,
-        )
+        assert list(self.ph_ob.keys()) == self.ph_ob_keys, f"\n{list(self.ph_ob.keys())}\n{self.ph_ob_keys}\n"
         ob_shape = tf.shape(next(iter(self.ph_ob.values())))
         self.sy_nenvs = ob_shape[0]
         self.sy_nsteps = ob_shape[1]

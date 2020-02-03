@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import time
 from contextlib import contextmanager
 
@@ -20,9 +18,9 @@ def fmt_item(x, l):
     if isinstance(x, (float, np.float32, np.float64)):
         v = abs(x)
         if (v < 1e-4 or v > 1e4) and v > 0:
-            rep = "%7.2e" % x
+            rep = f"{x:7.2e}"
         else:
-            rep = "%7.5f" % x
+            rep = f"{x:7.5f}"
     else:
         rep = str(x)
     return " " * (l - len(rep)) + rep
@@ -49,7 +47,7 @@ def colorize(string, color, bold=False, highlight=False):
     attr.append(str(num))
     if bold:
         attr.append("1")
-    return "\x1b[%sm%s\x1b[0m" % (";".join(attr), string)
+    return f"\x1b[{';'.join(attr)}m{string}\x1b[0m"
 
 
 MESSAGE_DEPTH = 0
@@ -65,7 +63,8 @@ def timed(msg):
     MESSAGE_DEPTH -= 1
     print(
         colorize(
-            "\t" * MESSAGE_DEPTH + "done in %.3f seconds" % (time.time() - tstart),
+            '\t' * MESSAGE_DEPTH +
+            f"done in {time.time() - tstart:.3f}",
             color="magenta",
         )
     )

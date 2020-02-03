@@ -165,8 +165,7 @@ class CnnGruPolicy(StochasticPolicy):
         ph = ph_ob
         assert len(ph.shape.as_list()) == 5  # B,T,H,W,C
         logger.info(
-            "CnnGruPolicy: using '%s' shape %s as image input"
-            % (ph.name, str(ph.shape))
+            f"CnnGruPolicy: using '{ph.name}' shape {ph.shape} as image input"
         )
         X = tf.cast(ph, tf.float32) / 255.0
         X = tf.reshape(X, (-1, *ph.shape.as_list()[-3:]))
@@ -240,8 +239,7 @@ class CnnGruPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xr = ph[:, 1:]
                 xr = tf.cast(xr, tf.float32)
@@ -285,8 +283,7 @@ class CnnGruPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xrp = ph[:, 1:]
                 xrp = tf.cast(xrp, tf.float32)
@@ -370,8 +367,7 @@ class CnnGruPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xr = ph[:, 1:]
                 xr = tf.cast(xr, tf.float32)
@@ -427,8 +423,7 @@ class CnnGruPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xrp = ph[:, :-1]
                 xrp = tf.cast(xrp, tf.float32)

@@ -79,7 +79,7 @@ def train(*, env_id, num_env, hps, num_timesteps, seed):
     agent.start_interaction([venv])
     if hps.pop("update_ob_stats_from_random_agent"):
         agent.collect_random_statistics(num_timesteps=128 * 50)
-    assert len(hps) == 0, "Unused hyperparameters: %s" % list(hps.keys())
+    assert len(hps) == 0, f"Unused hyperparameters: {list(hps.keys())}"
 
     counter = 0
     while True:

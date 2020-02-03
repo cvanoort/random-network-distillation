@@ -346,13 +346,13 @@ def display_var_info(vars):
         v_params = np.prod(v.shape.as_list())
         count_params += v_params
         if "/b:" in name or "/biases" in name:
-            continue  # Wx+b, bias is not interesting to look at => count params, but not print
+            # Wx+b, bias is not interesting to look at => count params, but not print
+            continue
         logger.info(
-            "   %s%s %i params %s"
-            % (name, " " * (55 - len(name)), v_params, str(v.shape))
+            f"   {name}{' ' * (55 - len(name))} {v_params:i} params {v.shape}"
         )
 
-    logger.info("Total model parameters: %0.2f million" % (count_params * 1e-6))
+    logger.info(f"Total model parameters: {count_params * 1e-6:0.2f} million")
 
 
 def get_available_gpus():

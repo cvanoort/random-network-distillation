@@ -10,7 +10,6 @@ from utils import fc, conv, ortho_init
 
 def to2d(x):
     size = 1
-    print(x.get_shape())
     for shapel in x.get_shape()[1:]:
         size *= shapel.value
     return tf.reshape(x, (-1, size))
@@ -143,7 +142,7 @@ class CnnPolicy(StochasticPolicy):
         ph = ph_ob
         assert len(ph.shape.as_list()) == 5  # B,T,H,W,C
         logger.info(
-            "CnnPolicy: using '%s' shape %s as image input" % (ph.name, str(ph.shape))
+            f"CnnPolicy: using '{ph.name}' shape {ph.shape} as image input"
         )
         X = tf.cast(ph, tf.float32) / 255.0
         X = tf.reshape(X, (-1, *ph.shape.as_list()[-3:]))
@@ -234,8 +233,7 @@ class CnnPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xr = ph[:, 1:]
                 xr = tf.cast(xr, tf.float32)
@@ -279,8 +277,7 @@ class CnnPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xrp = ph[:, 1:]
                 xrp = tf.cast(xrp, tf.float32)
@@ -364,8 +361,7 @@ class CnnPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xr = ph[:, 1:]
                 xr = tf.cast(xr, tf.float32)
@@ -421,8 +417,7 @@ class CnnPolicy(StochasticPolicy):
         for ph in self.ph_ob.values():
             if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
                 logger.info(
-                    "CnnTarget: using '%s' shape %s as image input"
-                    % (ph.name, str(ph.shape))
+                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xrp = ph[:, :-1]
                 xrp = tf.cast(xrp, tf.float32)

@@ -38,10 +38,7 @@ class Monitor(Wrapper):
                     filename = filename + "." + Monitor.EXT
             self.f = open(filename, "wt")
             self.f.write(
-                "#%s\n"
-                % json.dumps(
-                    {"t_start": self.tstart, "env_id": env.spec and env.spec.id}
-                )
+                f'#{json.dumps({"t_start": self.tstart, "env_id": env.spec and env.spec.id})}\n'
             )
             self.logger = csv.DictWriter(
                 self.f, fieldnames=("r", "l", "t") + reset_keywords + info_keywords
@@ -65,14 +62,16 @@ class Monitor(Wrapper):
     def reset(self, **kwargs):
         if not self.allow_early_resets and not self.needs_reset:
             raise RuntimeError(
-                "Tried to reset an environment before done. If you want to allow early resets, wrap your env with Monitor(env, path, allow_early_resets=True)"
+                "Tried to reset an environment before done. "
+                "If you want to allow early resets, wrap your env with "
+                "Monitor(env, path, allow_early_resets=True)"
             )
         self.rewards = []
         self.needs_reset = False
         for k in self.reset_keywords:
             v = kwargs.get(k)
             if v is None:
-                raise ValueError("Expected you to pass kwarg %s into reset" % k)
+                raise ValueError(f"Expected you to pass kwarg {k} into reset")
             self.current_reset_info[k] = v
         return self.env.reset(**kwargs)
 
@@ -138,7 +137,7 @@ def load_results(dir):
     )  # get both csv and (old) json files
     if not monitor_files:
         raise LoadMonitorResultsError(
-            "no monitor files of the form *%s found in %s" % (Monitor.EXT, dir)
+            f"no monitor files of the form *{Monitor.EXT} found in {dir}"
         )
     dfs = []
     headers = []
@@ -174,7 +173,7 @@ def load_results(dir):
 def test_monitor():
     env = gym.make("CartPole-v1")
     env.seed(0)
-    mon_file = "/tmp/baselines-test-%s.monitor.csv" % uuid.uuid4()
+    mon_file = f"/tmp/baselines-test-{uuid.uuid4()}.monitor.csv"
     menv = Monitor(env, mon_file)
     menv.reset()
     for _ in range(1000):

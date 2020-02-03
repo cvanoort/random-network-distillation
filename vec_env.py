@@ -88,7 +88,7 @@ class VecEnv(ABC):
         return self.step_wait()
 
     def render(self, mode="human"):
-        logger.warn("Render not defined for %s" % self)
+        logger.warn(f"Render not defined for {self}")
 
     @property
     def unwrapped(self):
