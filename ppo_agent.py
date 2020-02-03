@@ -529,7 +529,7 @@ class PpoAgent(object):
 
             if self.meta_rl:
                 fd[self.stochpol.ph_ob['prev_acs']] = one_hot(self.I.buf_acs[mbenvinds], self.ac_space.n)
-                fd[self.stochpol.ph_ob['prev_rew']] = self.I.buf_rews_ext[mbenvinds]
+                fd[self.stochpol.ph_ob['prev_rew']] = self.I.buf_rews_ext[mbenvinds, ..., None]
 
             assert list(fd[self.stochpol.ph_ob['obs']].shape) == [
                 self.I.nenvs // self.nminibatches,

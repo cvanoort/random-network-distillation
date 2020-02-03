@@ -506,12 +506,11 @@ class CnnPolicy(StochasticPolicy):
 
     def call(self, dict_obs, new, istate, update_obs_stats=False):
         for ob in dict_obs.values():
-            if ob is not None:
-                if update_obs_stats:
-                    raise NotImplementedError
-                    ob = ob.astype(np.float32)
-                    ob = ob.reshape(-1, *self.ob_space.shape)
-                    self.ob_rms.update(ob)
+            if (ob is not None) and update_obs_stats:
+                raise NotImplementedError
+                ob = ob.astype(np.float32)
+                ob = ob.reshape(-1, *self.ob_space.shape)
+                self.ob_rms.update(ob)
         # Note: if it fails here with ph vs observations inconsistency, check if you're loading agent from disk.
         # It will use whatever observation spaces saved to disk along with other ctor params.
         feed1 = {
