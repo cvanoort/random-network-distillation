@@ -349,7 +349,7 @@ def display_var_info(vars):
             # Wx+b, bias is not interesting to look at => count params, but not print
             continue
         logger.info(
-            f"   {name}{' ' * (55 - len(name))} {v_params:i} params {v.shape}"
+            f"   {name}{' ' * (55 - len(name))} {v_params:d} params {v.shape}"
         )
 
     logger.info(f"Total model parameters: {count_params * 1e-6:0.2f} million")

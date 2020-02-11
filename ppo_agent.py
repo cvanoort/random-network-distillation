@@ -228,7 +228,7 @@ class PpoAgent(object):
                 tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.abs_scope
             )
             logger.info(
-                f"PPO: using MpiAdamOptimizer connected to {self.comm_train_size:i} peers"
+                f"PPO: using MpiAdamOptimizer connected to {self.comm_train_size:d} peers"
             )
             trainer = MpiAdamOptimizer(
                 self.comm_train, learning_rate=self.ph_lr, **self.adam_hps
@@ -499,10 +499,10 @@ class PpoAgent(object):
             samples = np.prod(self.I.buf_advs.shape)
             logger.info(
                 f"buffer shape {self.I.buf_advs.shape}, "
-                f"samples_per_mpi={samples:i}, "
-                f"mini_per_mpi={samples // self.nminibatches:i}, "
-                f"samples={samples * self.comm_train_size:i}, "
-                f"mini={samples * self.comm_train_size // self.nminibatches:i} "
+                f"samples_per_mpi={samples:d}, "
+                f"mini_per_mpi={samples // self.nminibatches:d}, "
+                f"samples={samples * self.comm_train_size:d}, "
+                f"mini={samples * self.comm_train_size // self.nminibatches:d} "
             )
             logger.info(" " * 6 + fmt_row(13, self.loss_names))
 
@@ -556,7 +556,7 @@ class PpoAgent(object):
             lossdict["maxkl"] = maxmaxkl["maxkl"]
             if verbose and self.is_log_leader:
                 logger.info(
-                    f"{epoch:i}:{start:03i} {fmt_row(13, [lossdict[n] for n in self.loss_names])}"
+                    f"{epoch:d}:{start:03d} {fmt_row(13, [lossdict[n] for n in self.loss_names])}"
                 )
             start += envsperbatch
             if start == self.I.nenvs:

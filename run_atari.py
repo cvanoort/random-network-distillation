@@ -2,6 +2,7 @@
 import functools
 import os
 
+import gym_vail
 from baselines import logger
 from mpi4py import MPI
 
@@ -13,6 +14,8 @@ from policies.cnn_policy_param_matched import CnnPolicy
 from ppo_agent import PpoAgent
 from utils import set_global_seeds
 from vec_env import VecFrameStack
+
+gym_vail.register_envs()
 
 
 def train(*, env_id, num_env, hps, num_timesteps, seed):
@@ -118,7 +121,7 @@ def main():
         "--proportion_of_exp_used_for_predictor_update", type=float, default=1.0
     )
     parser.add_argument("--tag", type=str, default="")
-    parser.add_argument("--policy", type=str, default="rnn", choices=["cnn", "rnn"])
+    parser.add_argument("--policy", type=str, default="cnn", choices=["cnn", "rnn"])
     parser.add_argument("--int_coeff", type=float, default=1.0)
     parser.add_argument("--ext_coeff", type=float, default=2.0)
     parser.add_argument("--dynamics_bonus", type=int, default=0)
