@@ -156,31 +156,35 @@ class VecFrameStack(VecEnvWrapper):
         self.venv = venv
         self.nstack = nstack
         wos = venv.observation_space  # wrapped ob space
-        low = np.repeat(wos.low, self.nstack, axis=-1)
-        high = np.repeat(wos.high, self.nstack, axis=-1)
-        self.stackedobs = np.zeros((venv.num_envs,) + low.shape, low.dtype)
+        low = getattr(wos, 'low', 0.)
+        high = getattr(wos, 'high', 1.)
+        low = np.repeat(low, self.nstack, axis=-1)
+        high = np.repeat(high, self.nstack, axis=-1)
+        self.stacked_obs = np.zeros((venv.num_envs,) + low.shape, low.dtype)
         observation_space = spaces.Box(
-            low=low, high=high, dtype=venv.observation_space.dtype
+            low=low,
+            high=high,
+            dtype=venv.observation_space.dtype,
         )
         VecEnvWrapper.__init__(self, venv, observation_space=observation_space)
 
     def step_wait(self):
         obs, rews, news, infos = self.venv.step_wait()
-        self.stackedobs = np.roll(self.stackedobs, shift=-1, axis=-1)
+        self.stacked_obs = np.roll(self.stacked_obs, shift=-1, axis=-1)
         for (i, new) in enumerate(news):
             if new:
-                self.stackedobs[i] = 0
-        self.stackedobs[..., -obs.shape[-1]:] = obs
-        return self.stackedobs, rews, news, infos
+                self.stacked_obs[i] = 0
+        self.stacked_obs[..., -obs.shape[-1]:] = obs
+        return self.stacked_obs, rews, news, infos
 
     def reset(self):
         """
         Reset all environments
         """
         obs = self.venv.reset()
-        self.stackedobs[...] = 0
-        self.stackedobs[..., -obs.shape[-1]:] = obs
-        return self.stackedobs
+        self.stacked_obs[...] = 0
+        self.stacked_obs[..., -obs.shape[-1]:] = obs
+        return self.stacked_obs
 
     def close(self):
         self.venv.close()

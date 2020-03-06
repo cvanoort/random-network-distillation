@@ -48,7 +48,7 @@ class GRUCell(tf.nn.rnn_cell.RNNCell):
         return h, h
 
 
-class CnnGruPolicy(StochasticPolicy):
+class GruPolicy(StochasticPolicy):
     def __init__(
             self,
             scope,
@@ -78,7 +78,7 @@ class CnnGruPolicy(StochasticPolicy):
         )
         memsize *= enlargement
         hidsize *= enlargement
-        convfeat = 16 * enlargement
+        rnd_width = 16 * enlargement
         self.ob_rms = RunningMeanStd(
             shape=list(ob_space.shape[:2]) + [1],
             use_mpi=not update_ob_stats_independently_per_gpu,
@@ -128,13 +128,9 @@ class CnnGruPolicy(StochasticPolicy):
             rec_gate_init=rec_gate_init,
         )
         if dynamics_bonus:
-            self.define_dynamics_prediction_rew(
-                convfeat=convfeat, rep_size=rep_size, enlargement=enlargement
-            )
+            self.define_dynamics_prediction_rew(width=rnd_width, rep_size=rep_size, enlargement=enlargement)
         else:
-            self.define_self_prediction_rew(
-                convfeat=convfeat, rep_size=rep_size, enlargement=enlargement
-            )
+            self.define_self_prediction_rew(width=rnd_width, rep_size=rep_size, enlargement=enlargement)
 
         pd = self.pdtype.pdfromflat(self.pdparam_rollout)
         self.a_samp = pd.sample()
@@ -161,12 +157,11 @@ class CnnGruPolicy(StochasticPolicy):
             pdparamsize,
             rec_gate_init,
     ):
-        data_format = "NHWC"
         ph = ph_ob
         logger.info(
             f"CnnGruPolicy: using '{ph.name}' shape {ph.shape} as image input"
         )
-        assert len(ph.shape.as_list()) == 5  # B,T,H,W,C
+        assert len(ph.shape.as_list()) == 3  # B, Envs, Features
         X = tf.cast(ph, tf.float32) / 255.0
         X = tf.reshape(X, (-1, *ph.shape.as_list()[-3:]))
 
@@ -177,36 +172,27 @@ class CnnGruPolicy(StochasticPolicy):
                 "/gpu:0" if yes_gpu else "/cpu:0"
         ):
             X = activ(
-                conv(
+                fc(
                     X,
-                    "c1",
-                    nf=32,
-                    rf=8,
-                    stride=4,
+                    "fc1",
+                    nh=32,
                     init_scale=np.sqrt(2),
-                    data_format=data_format,
                 )
             )
             X = activ(
-                conv(
+                fc(
                     X,
-                    "c2",
-                    nf=64,
-                    rf=4,
-                    stride=2,
+                    "fc2",
+                    nh=64,
                     init_scale=np.sqrt(2),
-                    data_format=data_format,
                 )
             )
             X = activ(
-                conv(
+                fc(
                     X,
-                    "c3",
-                    nf=64,
-                    rf=4,
-                    stride=1,
+                    "fc3",
+                    nh=64,
                     init_scale=np.sqrt(2),
-                    data_format=data_format,
                 )
             )
             X = to2d(X)
@@ -233,13 +219,13 @@ class CnnGruPolicy(StochasticPolicy):
             vpred_ext = tf.reshape(vpred_ext, (sy_nenvs, sy_nsteps))
         return pdparam, vpred_int, vpred_ext, snext
 
-    def define_self_prediction_rew(self, convfeat, rep_size, enlargement):
+    def define_self_prediction_rew(self, width, rep_size, enlargement):
         # RND.
         # Random target network.
         for ph in self.ph_ob.values():
-            if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
+            if len(ph.shape.as_list()) == 3:  # B, Envs, Features
                 logger.info(
-                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
+                    f"FFNNTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xr = ph[:, 1:]
                 xr = tf.cast(xr, tf.float32)
@@ -247,43 +233,37 @@ class CnnGruPolicy(StochasticPolicy):
                 xr = tf.clip_by_value((xr - self.ph_mean) / self.ph_std, -5.0, 5.0)
 
                 xr = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xr,
-                        "c1r",
-                        nf=convfeat * 1,
-                        rf=8,
-                        stride=4,
+                        "fc1r",
+                        nh=width * 1,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xr = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xr,
-                        "c2r",
-                        nf=convfeat * 2 * 1,
-                        rf=4,
-                        stride=2,
+                        "fc2r",
+                        nh=width * 2 * 1,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xr = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xr,
-                        "c3r",
-                        nf=convfeat * 2 * 1,
-                        rf=3,
-                        stride=1,
+                        "fc3r",
+                        nh=width * 2 * 1,
                         init_scale=np.sqrt(2),
                     )
                 )
                 rgbr = [to2d(xr)]
-                X_r = fc(rgbr[0], "fc1r", nh=rep_size, init_scale=np.sqrt(2))
+                X_r = fc(rgbr[0], "fc4r", nh=rep_size, init_scale=np.sqrt(2))
 
         # Predictor network.
         for ph in self.ph_ob.values():
-            if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
+            if len(ph.shape.as_list()) == 3:  # B,Envs,Features
                 logger.info(
-                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
+                    f"FFNNTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xrp = ph[:, 1:]
                 xrp = tf.cast(xrp, tf.float32)
@@ -291,32 +271,26 @@ class CnnGruPolicy(StochasticPolicy):
                 xrp = tf.clip_by_value((xrp - self.ph_mean) / self.ph_std, -5.0, 5.0)
 
                 xrp = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xrp,
-                        "c1rp_pred",
-                        nf=convfeat,
-                        rf=8,
-                        stride=4,
+                        "fc1rp_pred",
+                        nh=width,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xrp = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xrp,
-                        "c2rp_pred",
-                        nf=convfeat * 2,
-                        rf=4,
-                        stride=2,
+                        "fc2rp_pred",
+                        nh=width * 2,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xrp = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xrp,
-                        "c3rp_pred",
-                        nf=convfeat * 2,
-                        rf=3,
-                        stride=1,
+                        "fc3rp_pred",
+                        nh=width * 2,
                         init_scale=np.sqrt(2),
                     )
                 )
@@ -338,20 +312,30 @@ class CnnGruPolicy(StochasticPolicy):
                     )
                 )
                 X_r_hat = fc(
-                    X_r_hat, "fc1r_hat3_pred", nh=rep_size, init_scale=np.sqrt(2)
+                    X_r_hat, "fc1r_hat3_pred",
+                    nh=rep_size,
+                    init_scale=np.sqrt(2),
                 )
 
         self.feat_var = tf.reduce_mean(tf.nn.moments(X_r, axes=[0])[1])
         self.max_feat = tf.reduce_max(tf.abs(X_r))
         self.int_rew = tf.reduce_mean(
-            tf.square(tf.stop_gradient(X_r) - X_r_hat), axis=-1, keep_dims=True
+            tf.square(tf.stop_gradient(X_r) - X_r_hat),
+            axis=-1,
+            keep_dims=True,
         )
-        self.int_rew = tf.reshape(self.int_rew, (self.sy_nenvs, self.sy_nsteps - 1))
+        self.int_rew = tf.reshape(
+            self.int_rew,
+            (self.sy_nenvs, self.sy_nsteps - 1),
+        )
 
         noisy_targets = tf.stop_gradient(X_r)
         self.aux_loss = tf.reduce_mean(tf.square(noisy_targets - X_r_hat), -1)
         mask = tf.random_uniform(
-            shape=tf.shape(self.aux_loss), minval=0.0, maxval=1.0, dtype=tf.float32
+            shape=tf.shape(self.aux_loss),
+            minval=0.0,
+            maxval=1.0,
+            dtype=tf.float32,
         )
         mask = tf.cast(
             mask < self.proportion_of_exp_used_for_predictor_update, tf.float32
@@ -360,14 +344,14 @@ class CnnGruPolicy(StochasticPolicy):
             tf.reduce_sum(mask), 1.0
         )
 
-    def define_dynamics_prediction_rew(self, convfeat, rep_size, enlargement):
+    def define_dynamics_prediction_rew(self, width, rep_size, enlargement):
         # Dynamics based bonus.
 
         # Random target network.
         for ph in self.ph_ob.values():
-            if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
+            if len(ph.shape.as_list()) == 3:  # B, Envs, Features
                 logger.info(
-                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
+                    f"FFNNTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xr = ph[:, 1:]
                 xr = tf.cast(xr, tf.float32)
@@ -375,37 +359,31 @@ class CnnGruPolicy(StochasticPolicy):
                 xr = tf.clip_by_value((xr - self.ph_mean) / self.ph_std, -5.0, 5.0)
 
                 xr = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xr,
-                        "c1r",
-                        nf=convfeat * 1,
-                        rf=8,
-                        stride=4,
+                        "fc1r",
+                        nh=width * 1,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xr = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xr,
-                        "c2r",
-                        nf=convfeat * 2 * 1,
-                        rf=4,
-                        stride=2,
+                        "fc2r",
+                        nh=width * 2 * 1,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xr = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xr,
-                        "c3r",
-                        nf=convfeat * 2 * 1,
-                        rf=3,
-                        stride=1,
+                        "fc3r",
+                        nh=width * 2 * 1,
                         init_scale=np.sqrt(2),
                     )
                 )
                 rgbr = [to2d(xr)]
-                X_r = fc(rgbr[0], "fc1r", nh=rep_size, init_scale=np.sqrt(2))
+                X_r = fc(rgbr[0], "fc4r", nh=rep_size, init_scale=np.sqrt(2))
 
         # Predictor network.
         ac_one_hot = tf.one_hot(self.ph_ac, self.ac_space.n, axis=2)
@@ -421,9 +399,9 @@ class CnnGruPolicy(StochasticPolicy):
             return tf.concat([x, ac_one_hot], 1)
 
         for ph in self.ph_ob.values():
-            if len(ph.shape.as_list()) == 5:  # B,T,H,W,C
+            if len(ph.shape.as_list()) == 3:  # B, Envs, Features
                 logger.info(
-                    f"CnnTarget: using '{ph.name}' shape {ph.shape} as image input"
+                    f"FFNNTarget: using '{ph.name}' shape {ph.shape} as image input"
                 )
                 xrp = ph[:, :-1]
                 xrp = tf.cast(xrp, tf.float32)
@@ -432,32 +410,26 @@ class CnnGruPolicy(StochasticPolicy):
                 xrp = tf.clip_by_value((xrp - self.ph_mean) / self.ph_std, -5.0, 5.0)
 
                 xrp = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xrp,
-                        "c1rp_pred",
-                        nf=convfeat,
-                        rf=8,
-                        stride=4,
+                        "fc1rp_pred",
+                        nh=width,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xrp = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xrp,
-                        "c2rp_pred",
-                        nf=convfeat * 2,
-                        rf=4,
-                        stride=2,
+                        "fc2rp_pred",
+                        nh=width * 2,
                         init_scale=np.sqrt(2),
                     )
                 )
                 xrp = tf.nn.leaky_relu(
-                    conv(
+                    fc(
                         xrp,
-                        "c3rp_pred",
-                        nf=convfeat * 2,
-                        rf=3,
-                        stride=1,
+                        "fc3rp_pred",
+                        nh=width * 2,
                         init_scale=np.sqrt(2),
                     )
                 )
@@ -506,12 +478,6 @@ class CnnGruPolicy(StochasticPolicy):
         return np.zeros((n, self.memsize), np.float32)
 
     def call(self, dict_obs, new, istate, update_obs_stats=False):
-        for ob in dict_obs.values():
-            if (ob is not None) and update_obs_stats:
-                raise NotImplementedError
-                ob = ob.astype(np.float32)
-                ob = ob.reshape(-1, *self.ob_space.shape)
-                self.ob_rms.update(ob)
         # Note: if it fails here with ph vs observations inconsistency, check if you're loading agent from disk.
         # It will use whatever observation spaces saved to disk along with other ctor params.
         feed1 = {

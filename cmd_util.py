@@ -6,13 +6,18 @@ import os
 
 from baselines import logger
 
-from atari_wrappers import make_atari, wrap_deepmind
+from atari_wrappers import make_atari, make_non_atari, wrap_deepmind
 from monitor import Monitor
 from vec_env import SubprocVecEnv
 
 
 def make_atari_env(
-    env_id, num_env, seed, wrapper_kwargs=None, start_index=0, max_episode_steps=4500
+        env_id,
+        num_env,
+        seed,
+        wrapper_kwargs=None,
+        start_index=0,
+        max_episode_steps=4500,
 ):
     """
     Create a wrapped, monitored SubprocVecEnv for Atari.
@@ -30,6 +35,31 @@ def make_atari_env(
                 allow_early_resets=True,
             )
             return wrap_deepmind(env, **wrapper_kwargs)
+        return _thunk
+    return SubprocVecEnv([make_env(i + start_index) for i in range(num_env)])
+
+
+def make_non_atari_env(
+        env_id,
+        num_env,
+        seed,
+        wrapper_kwargs=None,
+        start_index=0,
+        max_episode_steps=4500,
+):
+    """
+    Create a wrapped, monitored SubprocVecEnv for non-Atari envs.
+    """
+    def make_env(rank):
+        def _thunk():
+            env = make_non_atari(env_id, max_episode_steps=max_episode_steps)
+            env.seed(seed + rank)
+            env = Monitor(
+                env,
+                logger.get_dir() and os.path.join(logger.get_dir(), str(rank)),
+                allow_early_resets=True,
+            )
+            return env
         return _thunk
     return SubprocVecEnv([make_env(i + start_index) for i in range(num_env)])
 

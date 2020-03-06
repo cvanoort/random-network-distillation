@@ -8,9 +8,10 @@ from mpi4py import MPI
 
 import mpi_util
 import tf_util
-from cmd_util import make_atari_env, arg_parser
+from cmd_util import make_atari_env, make_non_atari_env, arg_parser
 from policies.cnn_gru_policy_dynamics import CnnGruPolicy
 from policies.cnn_policy_param_matched import CnnPolicy
+from policies.ffnn_gru_policy_dynamics import GruPolicy
 from ppo_agent import PpoAgent
 from utils import set_global_seeds
 from vec_env import VecFrameStack
@@ -19,8 +20,13 @@ gym_vail.register_envs()
 
 
 def train(*, env_id, num_env, hps, num_timesteps, seed):
+    if "NoFrameskip" in env_id:
+        env_factory = make_atari_env
+    else:
+        env_factory = make_non_atari_env
+
     venv = VecFrameStack(
-        make_atari_env(
+        env_factory(
             env_id,
             num_env,
             seed,
@@ -43,7 +49,7 @@ def train(*, env_id, num_env, hps, num_timesteps, seed):
     ob_space = venv.observation_space
     ac_space = venv.action_space
     gamma = hps.pop("gamma")
-    policy = {"rnn": CnnGruPolicy, "cnn": CnnPolicy}[hps.pop("policy")]
+    policy = {"rnn": CnnGruPolicy, "cnn": CnnPolicy, 'ffnn': GruPolicy}[hps.pop("policy")]
     agent = PpoAgent(
         scope="ppo",
         ob_space=ob_space,
@@ -108,23 +114,82 @@ def add_env_params(parser):
 def main():
     parser = arg_parser()
     add_env_params(parser)
-    parser.add_argument("--num-timesteps", type=int, default=int(1e12))
-    parser.add_argument("--num_env", type=int, default=32)
-    parser.add_argument("--use_news", type=int, default=0)
-    parser.add_argument("--gamma", type=float, default=0.99)
-    parser.add_argument("--gamma_ext", type=float, default=0.999)
-    parser.add_argument("--lam", type=float, default=0.95)
-    parser.add_argument("--update_ob_stats_every_step", type=int, default=0)
-    parser.add_argument("--update_ob_stats_independently_per_gpu", type=int, default=0)
-    parser.add_argument("--update_ob_stats_from_random_agent", type=int, default=1)
     parser.add_argument(
-        "--proportion_of_exp_used_for_predictor_update", type=float, default=1.0
+        "--num-timesteps",
+        type=int,
+        default=int(1e12),
     )
-    parser.add_argument("--tag", type=str, default="")
-    parser.add_argument("--policy", type=str, default="cnn", choices=["cnn", "rnn"])
-    parser.add_argument("--int_coeff", type=float, default=1.0)
-    parser.add_argument("--ext_coeff", type=float, default=2.0)
-    parser.add_argument("--dynamics_bonus", type=int, default=0)
+    parser.add_argument(
+        "--num_env",
+        type=int,
+        default=32,
+    )
+    parser.add_argument(
+        "--use_news",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--gamma",
+        type=float,
+        default=0.99,
+    )
+    parser.add_argument(
+        "--gamma_ext",
+        type=float,
+        default=0.999,
+    )
+    parser.add_argument(
+        "--lam",
+        type=float,
+        default=0.95,
+    )
+    parser.add_argument(
+        "--update_ob_stats_every_step",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--update_ob_stats_independently_per_gpu",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--update_ob_stats_from_random_agent",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "--proportion_of_exp_used_for_predictor_update",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
+        "--tag",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "--policy",
+        type=str,
+        default="cnn",
+        choices=["cnn", "rnn", "ffnn"],
+    )
+    parser.add_argument(
+        "--int_coeff",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
+        "--ext_coeff",
+        type=float,
+        default=2.0,
+    )
+    parser.add_argument(
+        "--dynamics_bonus",
+        type=int,
+        default=0,
+    )
     parser.add_argument(
         "--meta_rl",
         type=lambda x: True if x.lower() in {'true', 't'} else False,

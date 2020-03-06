@@ -237,6 +237,16 @@ def make_atari(env_id, max_episode_steps=4500):
     return env
 
 
+def make_non_atari(env_id, max_episode_steps=4500):
+    env = gym.make(env_id)
+    if "Montezuma" in env_id or "Pitfall" in env_id:
+        env = MontezumaInfoWrapper(env, room_address=3 if "Montezuma" in env_id else 1)
+    else:
+        env = DummyMontezumaInfoWrapper(env)
+    env = AddRandomStateToInfo(env)
+    return env
+
+
 def wrap_deepmind(env, clip_rewards=True, frame_stack=False, scale=False):
     """Configure environment for DeepMind-style Atari.
     """

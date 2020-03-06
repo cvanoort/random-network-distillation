@@ -292,7 +292,8 @@ class PpoAgent(object):
         )
         self.disable_policy_update = disable_policy_update
         self.recorder = Recorder(
-            nenvs=self.I.nenvs, score_multiple=venvs[0].score_multiple
+            nenvs=self.I.nenvs,
+            score_multiple=venvs[0].score_multiple,
         )
 
     def collect_random_statistics(self, num_timesteps):
@@ -303,7 +304,9 @@ class PpoAgent(object):
         for step in range(num_timesteps):
             for lump in range(self.I.nlump):
                 acs = np.random.randint(
-                    low=0, high=self.ac_space.n, size=(self.I.lump_stride,)
+                    low=0,
+                    high=self.ac_space.n,
+                    size=(self.I.lump_stride,),
                 )
                 self.I.venvs[lump].step_async(acs)
                 ob, _, _, _ = self.I.venvs[lump].step_wait()
